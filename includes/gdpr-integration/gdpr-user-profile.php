@@ -46,7 +46,7 @@ class WPAS_GDPR_User_Profile {
 		add_action( 'wp_ajax_nopriv_wpas_gdpr_export_data', array( $this, 'wpas_gdpr_export_data' ) );
 
 		add_action( 'init', array( $this, 'download_file' ) );
-		
+
 	}
 
 	/**
@@ -118,7 +118,7 @@ class WPAS_GDPR_User_Profile {
 						$data_user = (int) $user_id;
 					?>
 					<h2><?php esc_html_e( 'Awesome Support: Data Export', 'awesome-support' ); ?></h2>
-					<input type="submit" name="wpas-gdpr-export-data-submit" id="wpas-gdpr-export-data-submit" data-user="<?php echo $data_user; ?>" class="button button-primary" value="<?php esc_attr_e( 'Export data', 'awesome-support' ); ?>">
+					<input type="submit" name="wpas-gdpr-export-data-submit" id="wpas-gdpr-export-data-submit" data-user="<?php echo esc_attr( $data_user ); ?>" class="button button-primary" value="<?php esc_attr_e( 'Export data', 'awesome-support' ); ?>">
 				</div>
 			</div>
 			<?php
@@ -131,7 +131,7 @@ class WPAS_GDPR_User_Profile {
 			if ( ! empty( $user_consent ) && is_array( $user_consent ) ) {
 	?>
 		<div id="wpas_user_profile_segment">
-			<h2><?php esc_html_e( 'Awesome Support: Consents Granted', 'awesome-support' ); ?></h2>		
+			<h2><?php esc_html_e( 'Awesome Support: Consents Granted', 'awesome-support' ); ?></h2>
 			<table class="form-table wp-list-table widefat fixed striped wpas-consent-history">
 				<thead>
 					<tr>
@@ -242,7 +242,7 @@ class WPAS_GDPR_User_Profile {
 					 * Loop the consent log
 					 */
 				foreach ( $consent_log as $log ) {
-					echo '<tr><td>' . $log . '</td></tr>';
+					echo '<tr><td>' . esc_html( $log ) . '</td></tr>';
 				}
 				?>
 			</table>
@@ -274,46 +274,50 @@ class WPAS_GDPR_User_Profile {
 		 * Security checking
 		 */
 		if ( ! empty( $nonce ) && check_ajax_referer( 'wpas-gdpr-nonce', 'security' ) ) {
+			if ((int) $user == get_current_user_id()) {
 
-			$user_tickets = $this->wpas_gdpr_ticket_data( $user );
-			$user_consent = $this->wpas_gdpr_consent_data( $user );
-			if ( ! empty( $user_consent ) || ! empty( $user_tickets ) ) {
-				/**
-				 * Put them in awesome-support/user_log_$user_id
-				 * folders in uploads dir. This has .htaccess protect to avoid
-				 * direct access
-				 */
-				$this->user_export_dir = $this->set_log_dir( $user );
+				$user_tickets = $this->wpas_gdpr_ticket_data( $user );
+				$user_consent = $this->wpas_gdpr_consent_data( $user );
+				if ( ! empty( $user_consent ) || ! empty( $user_tickets ) ) {
+					/**
+					 * Put them in awesome-support/user_log_$user_id
+					 * folders in uploads dir. This has .htaccess protect to avoid
+					 * direct access
+					 */
+					$this->user_export_dir = $this->set_log_dir( $user );
 
-				$content = array_merge(
-					array( 'ticket_data' => $user_tickets ),
-					array( 'consent_log' => $user_consent )
-				);
+					$content = array_merge(
+						array( 'ticket_data' => $user_tickets ),
+						array( 'consent_log' => $user_consent )
+					);
 
-				$data = apply_filters( 'wpas_gdpr_export_data_profile', $content, $user );
+					$data = apply_filters( 'wpas_gdpr_export_data_profile', $content, $user );
 
-				file_put_contents(
-					$this->user_export_dir . '/export-data.xml',
-					$this->xml_conversion( $data )
-				);
+					file_put_contents(
+						$this->user_export_dir . '/export-data.xml',
+						$this->xml_conversion( $data )
+					);
 
-				$this->data_zip( $user_tickets, 'export-data.xml', $this->user_export_dir );
+					$this->data_zip( $user_tickets, 'export-data.xml', $this->user_export_dir );
 
-				$upload_dir                     = wp_upload_dir();
-				$response['message']['success'] = sprintf(
-					'<p>%s. <a href="%s" target="_blank" class="download-file-link">%s</a></p>',
-					__( 'Exporting data was successful!', 'awesome-support' ),
-					add_query_arg(
-						array(
-							'file'  => $user,
-							'check' => wp_create_nonce( 'as-validate-download-url' ),
-						), home_url()
-					),
-					__( 'Download it now..', 'awesome-support' )
-				);
+					$upload_dir                     = wp_upload_dir();
+					$response['message']['success'] = sprintf(
+						'<p>%s. <a href="%s" target="_blank" class="download-file-link">%s</a></p>',
+						__( 'Exporting data was successful!', 'awesome-support' ),
+						add_query_arg(
+							array(
+								'file'  => $user,
+								'check' => wp_create_nonce( 'as-validate-download-url' ),
+							), home_url()
+						),
+						__( 'Download it now..', 'awesome-support' )
+					);
 
+				} else {
+					$response['message']['error'] = sprintf( '<p>%s.</p>', __( 'No data exist', 'awesome-support' ) );
+				}
 			} else {
-				$response['message']['error'] = sprintf( '<p>%s.</p>', __( 'No data exist', 'awesome-support' ) );
+				$response['message'] = __( 'Cheating huh?', 'awesome-support' );
 			}
 		} else {
 			$response['message'] = __( 'Cheating huh?', 'awesome-support' );
@@ -353,7 +357,7 @@ class WPAS_GDPR_User_Profile {
 			);
 		if( !empty( $paged ) ){
 			$args['paged'] = $paged;
-		} 
+		}
 
 		$ticket_data  = new WP_Query( $args );
 		$user_tickets = array();
@@ -567,7 +571,7 @@ class WPAS_GDPR_User_Profile {
 							$ticket_ids = array();
 							$ticket_ids[] = $ticket['ticket_id'];
 							foreach ( $ticket['replies'] as $key => $reply ) {
-								$ticket_ids[] = $reply['reply_id'];	
+								$ticket_ids[] = $reply['reply_id'];
 							}
 							foreach ( $ticket_ids as $key => $tickets_id ) {
 								$this->add_attachments( $zip, $tickets_id );
@@ -589,7 +593,7 @@ class WPAS_GDPR_User_Profile {
 
 	/**
 	 * Add attachment in zip
-	 * 
+	 *
 	 * @param object $zip Zip instance.
 	 * @param int 	 $ticket_id Ticket ID.
 	 */
